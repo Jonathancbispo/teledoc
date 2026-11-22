@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teledoc Web Hub — Sistema Operacional (GitHub Pages)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #0b1120; color: #f1f5f9; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="p-4 space-y-4">
+
+  <!-- Barra de Topo Operacional -->
+  <header class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-extrabold text-base shadow">
+        TD
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-bold text-base text-white">TELEDOC WEB HUB</h1>
+          <span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-semibold">
+            ● ONLINE
+          </span>
+        </div>
+        <p class="text-xs text-slate-400">
+          Triagem Code 128 • Enriquecimento XML BASE • Visualizador Documental 300 DPI
+        </p>
+      </div>
+    </div>
+
+    <!-- Navegação dos Módulos -->
+    <nav class="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+      <button onclick="switchTab('consulta')" id="tab-btn-consulta"
+        class="px-3.5 py-2 rounded-lg text-xs font-bold bg-blue-600 text-white shadow cursor-pointer">
+        📂 Portal de Consulta & Visualizador
+      </button>
+      <button onclick="switchTab('auditoria')" id="tab-btn-auditoria"
+        class="px-3.5 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer flex items-center gap-1.5">
+        <span>⚠️ Central de Auditoria & Exceções</span>
+        <span id="badge-divergencias" class="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs">1</span>
+      </button>
+      <button onclick="switchTab('captura')" id="tab-btn-captura"
+        class="px-3.5 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer">
+        🖨️ Estação de Captura (fi-8170) & BASE XML
+      </button>
+    </nav>
+  </header>
+
+  <!-- MÓDULO 1: PORTAL DE CONSULTA E VISUALIZADOR EM ÁRVORE -->
+  <section id="panel-consulta" class="space-y-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5 flex flex-wrap items-center gap-3">
+      <input id="search-input" type="text" placeholder="Buscar por Protocolo (1984729102), Guia (G...), Prestador ou CNPJ..."
+        oninput="renderAll()"
+        class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+      <select id="status-filter" onchange="renderAll()"
+        class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+        <option value="">Todos os Status</option>
+        <option value="STATUS_INDEXADO_COM_SUCESSO">Validado (Indexado com Sucesso)</option>
+        <option value="STATUS_DIVERGENCIA_GUIAS">Divergência de Guias</option>
+        <option value="STATUS_PROTOCOLO_NAO_ENCONTRADO">Protocolo Não Encontrado</option>
+      </select>
+    </div>
+
+    <div class="grid grid-cols-12 gap-4">
+      <div class="col-span-12 lg:col-span-4 space-y-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-bold uppercase text-slate-400">Protocolos (TIPO_18)</h2>
+            <span id="count-protocolos" class="text-xs mono text-slate-400">0</span>
+          </div>
+          <div id="protocol-list-container" class="space-y-2"></div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2.5">
+          <h2 class="text-xs font-bold uppercase text-blue-400">🌲 Árvore Documental (Capa ➔ Guias ➔ Folhas)</h2>
+          <div id="document-tree-container" class="space-y-1.5 text-xs"></div>
+        </div>
+      </div>
+
+      <div class="col-span-12 lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col">
+        <div class="bg-slate-950 border-b border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="viewer-badge" class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 mono text-xs font-bold">TIPO_18</span>
+              <h3 id="viewer-title" class="text-sm font-bold text-white">Protocolo</h3>
+            </div>
+            <p id="viewer-subtitle" class="text-xs text-slate-400 mono mt-0.5">---</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="prevPage()" class="px-2.5 py-1.5 rounded border border-slate-700 bg-slate-800 text-xs font-semibold cursor-pointer">◀ Ant</button>
+            <button onclick="nextPage()" class="px-2.5 py-1.5 rounded border border-slate-700 bg-slate-800 text-xs font-semibold cursor-pointer">Próx ▶</button>
+            <button onclick="zoomViewer(0.15)" class="px-2.5 py-1.5 rounded border border-slate-700 bg-slate-800 text-xs font-bold cursor-pointer">➕ Zoom</button>
+            <button onclick="zoomViewer(-0.15)" class="px-2.5 py-1.5 rounded border border-slate-700 bg-slate-800 text-xs font-bold cursor-pointer">➖</button>
+            <button onclick="rotatePage(90)" class="px-2.5 py-1.5 rounded border border-slate-700 bg-slate-800 text-xs font-semibold cursor-pointer">↻ 90°</button>
+          </div>
+        </div>
+
+        <div class="border-b border-slate-800 px-4 py-2.5 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs bg-slate-900">
+          <div>
+            <span class="text-slate-400 block">Prestador (XML BASE)</span>
+            <strong id="meta-prestador" class="truncate block text-white">---</strong>
+          </div>
+          <div>
+            <span class="text-slate-400 block">CNPJ / Lote XML</span>
+            <strong id="meta-cnpj" class="mono text-slate-200">---</strong>
+          </div>
+          <div>
+            <span class="text-slate-400 block">Guias (Físico vs XML)</span>
+            <strong id="meta-guias" class="text-emerald-400 mono">---</strong>
+          </div>
+          <div>
+            <span class="text-slate-400 block">Valor Total Protocolo</span>
+            <strong id="meta-valor" class="text-emerald-400 mono">---</strong>
+          </div>
+        </div>
+
+        <div class="p-6 bg-slate-950 flex items-center justify-center overflow-auto min-h-[420px]">
+          <div id="page-render-card" class="w-full max-w-xl bg-white text-slate-900 rounded-lg shadow-lg border border-slate-300 p-6 space-y-4 transition-transform duration-200"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MÓDULO 2: CENTRAL DE AUDITORIA E TRATAMENTO DE EXCEÇÕES -->
+  <section id="panel-auditoria" class="hidden space-y-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+      <div>
+        <h2 class="text-sm font-bold text-white">Central de Auditoria e Conciliação (Físico vs. XML BASE)</h2>
+        <p class="text-xs text-slate-400">Fila de divergências de quantidade de guias ou protocolos não encontrados na BASE.</p>
+      </div>
+      <button onclick="resetDivergence()"
+        class="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 text-xs font-semibold cursor-pointer">
+        Recarregar Lote de Divergência
+      </button>
+    </div>
+    <div id="audit-container" class="space-y-4"></div>
+  </section>
+
+  <!-- MÓDULO 3: ESTAÇÃO DE CAPTURA FI-8170 & TABELA BASE XML -->
+  <section id="panel-captura" class="hidden space-y-4">
+    <div class="grid grid-cols-12 gap-4">
+      <div class="col-span-12 lg:col-span-6 bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-bold text-white">Ingestão de Páginas — Scanner Ricoh fi-8170 (Perfil 004 : BPO)</h2>
+          <span class="text-xs mono text-emerald-400 font-bold">300 DPI</span>
+        </div>
+        <div class="flex gap-2">
+          <input id="new-barcode" type="text" placeholder="Código Code 128 (ex: 1955019283, G1234567890123 ou vazio p/ Anexo)"
+            class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs mono text-white" />
+          <button onclick="ingestCustomPage()" class="px-3.5 py-2 rounded-lg bg-blue-600 text-white text-xs font-bold cursor-pointer">
+            + Capturar Página
+          </button>
+        </div>
+        <div id="ingest-log" class="bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-1.5 max-h-56 overflow-y-auto text-xs mono">
+          <div class="text-slate-400">Pronto para captura de páginas no lote.</div>
+        </div>
+      </div>
+
+      <div class="col-span-12 lg:col-span-6 bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+        <h2 class="text-sm font-bold text-white">Tabela `base_xml_porto` (XMLs Porto Seguro)</h2>
+        <div class="overflow-x-auto text-xs">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400">
+                <th class="py-2">Protocolo</th>
+                <th class="py-2">Prestador</th>
+                <th class="py-2">Guias Esp.</th>
+                <th class="py-2">Valor</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800 mono">
+              <tr><td class="py-2 font-bold text-blue-400">1984729102</td><td>Hospital Sírio-Libanês</td><td>2 guias</td><td class="text-emerald-400">R$ 4.850,75</td></tr>
+              <tr><td class="py-2 font-bold text-blue-400">2049182736</td><td>Laboratório Fleury S.A.</td><td>3 guias</td><td class="text-emerald-400">R$ 1.920,40</td></tr>
+              <tr><td class="py-2 font-bold text-blue-400">1955019283</td><td>Clínica Ortopédica Paulista</td><td>4 guias</td><td class="text-emerald-400">R$ 8.340,00</td></tr>
+              <tr><td class="py-2 font-bold text-blue-400">2011928374</td><td>Centro Diagnóstico Cardiológico</td><td>1 guia</td><td class="text-emerald-400">R$ 980,00</td></tr>
+              <tr><td class="py-2 font-bold text-blue-400">1990011223</td><td>Instituto de Oftalmologia SP</td><td>2 guias</td><td class="text-emerald-400">R$ 3.150,20</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const STATE = {
+      selectedProt: '1984729102',
+      selectedPageIdx: 0,
+      zoom: 1.0,
+      rot: 0,
+      protocols: {
+        '1984729102': {
+          numero_protocolo: '1984729102',
+          nome_prestador: 'Hospital Sírio-Libanês - Unidade Bela Vista',
+          codigo_prestador: '61.384.920/0001-12',
+          lote_origem: 'LT-2026-00918',
+          qtd_guias_esperada: 2,
+          qtd_guias_digitalizadas: 2,
+          valor_total: 4850.75,
+          status_validacao: 'STATUS_INDEXADO_COM_SUCESSO',
+          paginas: [
+            { num: 1, tipo: 'TIPO_18', code: '1984729102', guia: null, desc: 'Capa do Lote / Protocolo (Folha #1)' },
+            { num: 2, tipo: 'TIPO_20', code: null, guia: null, desc: 'Folha Anexa à Capa — Borderô de Entrega' },
+            { num: 3, tipo: 'TIPO_19', code: 'G9821827361829', guia: 'G9821827361829', desc: 'Guia Médica TISS #1 (Consulta Especializada)' },
+            { num: 4, tipo: 'TIPO_20', code: null, guia: 'G9821827361829', desc: 'Anexo #1 da Guia 1 — Laudo de Hemograma' },
+            { num: 5, tipo: 'TIPO_20', code: null, guia: 'G9821827361829', desc: 'Anexo #2 da Guia 1 — Receituário (Rotacionado 90°)' },
+            { num: 6, tipo: 'TIPO_20', code: null, guia: 'G9821827361829', desc: 'Anexo #3 da Guia 1 — Termo de Consentimento' },
+            { num: 7, tipo: 'TIPO_19', code: 'G9821827361830', guia: 'G9821827361830', desc: 'Guia Médica TISS #2 (Escaneada a 180°)' },
+            { num: 8, tipo: 'TIPO_20', code: null, guia: 'G9821827361830', desc: 'Anexo #1 da Guia 2 — Ressonância Magnética' },
+            { num: 9, tipo: 'TIPO_20', code: null, guia: 'G9821827361830', desc: 'Anexo #2 da Guia 2 — Evolução Clínica' },
+            { num: 10, tipo: 'TIPO_20', code: null, guia: 'G9821827361830', desc: 'Anexo #3 da Guia 2 — Comprovante de Atendimento' }
+          ]
+        },
+        '2049182736': {
+          numero_protocolo: '2049182736',
+          nome_prestador: 'Laboratório Fleury Medicina e Saúde S.A.',
+          codigo_prestador: '45.112.098/0001-88',
+          lote_origem: 'LT-2026-00919',
+          qtd_guias_esperada: 3,
+          qtd_guias_digitalizadas: 2,
+          valor_total: 1920.40,
+          status_validacao: 'STATUS_DIVERGENCIA_GUIAS',
+          paginas: [
+            { num: 1, tipo: 'TIPO_18', code: '2049182736', guia: null, desc: 'Capa do Lote / Protocolo Fleury' },
+            { num: 2, tipo: 'TIPO_19', code: 'G2026000011111', guia: 'G2026000011111', desc: 'Guia Médica TISS #1' },
+            { num: 3, tipo: 'TIPO_20', code: null, guia: 'G2026000011111', desc: 'Anexo da Guia 1 — Exame Laboratorial' },
+            { num: 4, tipo: 'TIPO_19', code: 'G2026000011112', guia: 'G2026000011112', desc: 'Guia Médica TISS #2' },
+            { num: 5, tipo: 'TIPO_20', code: null, guia: 'G2026000011112', desc: 'Guia #3 sem Barcode Legível (Classificada como Anexo TIPO_20)' }
+          ]
+        }
+      }
+    };
+
+    function switchTab(tab) {
+      ['consulta', 'auditoria', 'captura'].forEach(t => {
+        document.getElementById(`panel-${t}`).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tab) {
+          btn.className = 'px-3.5 py-2 rounded-lg text-xs font-bold bg-blue-600 text-white shadow cursor-pointer flex items-center gap-1.5';
+        } else {
+          btn.className = 'px-3.5 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer flex items-center gap-1.5';
+        }
+      });
+      renderAll();
+    }
+
+    function renderAll() {
+      const q = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
+      const st = document.getElementById('status-filter')?.value || '';
+
+      const allProts = Object.values(STATE.protocols);
+      const divCount = allProts.filter(p => p.status_validacao !== 'STATUS_INDEXADO_COM_SUCESSO').length;
+      document.getElementById('badge-divergencias').textContent = divCount;
+
+      const filtered = allProts.filter(p => {
+        if (st && p.status_validacao !== st) return false;
+        if (!q) return true;
+        return p.numero_protocolo.toLowerCase().includes(q) ||
+               p.nome_prestador.toLowerCase().includes(q) ||
+               p.codigo_prestador.toLowerCase().includes(q) ||
+               p.paginas.some(pg => (pg.code || '').toLowerCase().includes(q));
+      });
+
+      document.getElementById('count-protocolos').textContent = `${filtered.length} itens`;
+      document.getElementById('protocol-list-container').innerHTML = filtered.map(p => {
+        const active = STATE.selectedProt === p.numero_protocolo;
+        const ok = p.status_validacao === 'STATUS_INDEXADO_COM_SUCESSO';
+        return `
+          <div onclick="selectProt('${p.numero_protocolo}')"
+            class="p-3 rounded-lg border cursor-pointer transition ${active ? 'border-blue-500 bg-blue-500/10' : 'border-slate-800 bg-slate-950'}">
+            <div class="flex items-center justify-between">
+              <span class="font-bold mono text-xs text-white">${p.numero_protocolo}</span>
+              <span class="px-2 py-0.5 rounded text-xs font-bold ${ok ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}">
+                ${ok ? 'VALIDADO' : 'DIVERGÊNCIA'}
+              </span>
+            </div>
+            <div class="text-xs font-medium truncate mt-1 text-slate-200">${p.nome_prestador}</div>
+            <div class="flex justify-between text-xs text-slate-400 mono mt-1">
+              <span>Guias: ${p.qtd_guias_digitalizadas}/${p.qtd_guias_esperada}</span>
+              <span>${p.paginas.length} págs</span>
+              <span class="text-emerald-400">R$ ${p.valor_total.toFixed(2)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const curr = STATE.protocols[STATE.selectedProt];
+      if (curr) {
+        document.getElementById('meta-prestador').textContent = curr.nome_prestador;
+        document.getElementById('meta-cnpj').textContent = `${curr.codigo_prestador} (${curr.lote_origem})`;
+        document.getElementById('meta-guias').textContent = `${curr.qtd_guias_digitalizadas} Físicas / ${curr.qtd_guias_esperada} XML`;
+        document.getElementById('meta-valor').textContent = `R$ ${curr.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
+        document.getElementById('document-tree-container').innerHTML = curr.paginas.map((pg, idx) => {
+          const isSel = idx === STATE.selectedPageIdx;
+          const color = pg.tipo === 'TIPO_18' ? 'text-blue-400' : pg.tipo === 'TIPO_19' ? 'text-emerald-400' : 'text-slate-400';
+          return `
+            <button onclick="selectPage(${idx})"
+              class="w-full text-left px-2.5 py-1.5 rounded flex items-center justify-between cursor-pointer ${isSel ? 'bg-blue-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-200'}">
+              <span class="truncate">Pág #${pg.num} — ${pg.desc}</span>
+              <span class="mono text-xs shrink-0 ml-2 ${isSel ? 'text-white' : color}">${pg.tipo}</span>
+            </button>
+          `;
+        }).join('');
+
+        renderPagePreview(curr, curr.paginas[STATE.selectedPageIdx] || curr.paginas[0]);
+      }
+
+      renderAuditPanel();
+    }
+
+    function renderPagePreview(prot, pg) {
+      document.getElementById('viewer-badge').textContent = pg.tipo;
+      document.getElementById('viewer-title').textContent = `Protocolo ${prot.numero_protocolo} • Folha #${pg.num}`;
+      document.getElementById('viewer-subtitle').textContent = `Code 128: ${pg.code || 'Sem Código (Folha Anexa TIPO_20)'} | 300 DPI`;
+
+      const card = document.getElementById('page-render-card');
+      card.style.transform = `scale(${STATE.zoom}) rotate(${STATE.rot}deg)`;
+      card.innerHTML = `
+        <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div>
+            <div class="font-extrabold text-sm text-slate-900">PORTO SEGURO SAÚDE — CENTRAL TELEDOC</div>
+            <div class="text-xs text-slate-500 mono">Scanner: Ricoh fi-8170 | Perfil 004:BPO | 300 DPI</div>
+          </div>
+          <div class="border border-dashed border-slate-400 rounded px-3 py-1.5 text-center bg-slate-50">
+            <div class="mono text-xs tracking-widest font-black text-slate-900">
+              ${pg.code ? '||| |||| | ||| |||| || |||' : '[ FOLHA ANEXA ]'}
+            </div>
+            <div class="mono text-xs font-bold text-blue-700">${pg.code || 'TIPO_20'}</div>
+          </div>
+        </div>
+        <div class="p-3 rounded bg-blue-50 border border-blue-200 text-xs space-y-1">
+          <div class="font-bold text-blue-900">${pg.tipo} — ${pg.desc}</div>
+          <div class="text-slate-700"><strong>Prestador:</strong> ${prot.nome_prestador} (${prot.codigo_prestador})</div>
+          <div class="text-slate-700"><strong>Guia Vinculada:</strong> ${pg.guia || 'Capa Principal do Protocolo'} | <strong>Valor:</strong> R$ ${prot.valor_total.toFixed(2)}</div>
+        </div>
+        <div class="border border-slate-200 rounded p-4 space-y-2 text-xs text-slate-600 bg-slate-50/50">
+          <div class="font-bold text-slate-800">REGISTRO DOCUMENTAL DIGITALIZADO (PÁGINA #${pg.num})</div>
+          <div>• Código TUSS 10101012 — Consulta / Procedimento Clínico Auditado</div>
+          <div>• Código TUSS 40304361 — Exame Laboratorial / Diagnóstico de Imagem Anexado</div>
+          <div class="pt-2 text-emerald-700 mono font-bold">STATUS: ${prot.status_validacao}</div>
+        </div>
+      `;
+    }
+
+    function renderAuditPanel() {
+      const divs = Object.values(STATE.protocols).filter(p => p.status_validacao !== 'STATUS_INDEXADO_COM_SUCESSO');
+      const container = document.getElementById('audit-container');
+      if (divs.length === 0) {
+        container.innerHTML = `
+          <div class="bg-slate-900 border border-emerald-500/40 rounded-xl p-8 text-center space-y-1">
+            <div class="font-bold text-sm text-white">Fila de Auditoria Limpa</div>
+            <div class="text-xs text-slate-400">Todos os protocolos estão conciliados com a tabela BASE XML.</div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = divs.map(p => `
+        <div class="bg-slate-900 border border-amber-500/40 rounded-xl p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div>
+              <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-xs font-bold">${p.status_validacao}</span>
+              <strong class="ml-2 mono text-sm text-white">Protocolo ${p.numero_protocolo} — ${p.nome_prestador}</strong>
+            </div>
+            <div class="text-xs mono">
+              Guias Físicas: <strong class="text-amber-400">${p.qtd_guias_digitalizadas}</strong> vs Esperadas XML: <strong class="text-emerald-400">${p.qtd_guias_esperada}</strong>
+            </div>
+          </div>
+          <div class="space-y-1.5 text-xs">
+            ${p.paginas.map((pg, idx) => `
+              <div class="flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800">
+                <span>Pág #${pg.num} • <strong>${pg.tipo}</strong> — ${pg.desc}</span>
+                <div class="flex gap-1.5">
+                  ${pg.tipo === 'TIPO_20' ? `
+                    <button onclick="promotePageToGuide('${p.numero_protocolo}', ${idx})"
+                      class="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs cursor-pointer">
+                      + Converter em Guia (TIPO_19)
+                    </button>
+                  ` : ''}
+                  ${pg.tipo !== 'TIPO_18' ? `
+                    <button onclick="deletePage('${p.numero_protocolo}', ${idx})"
+                      class="px-2.5 py-1 rounded bg-rose-500/20 text-rose-400 font-bold text-xs cursor-pointer">
+                      Excluir
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function promotePageToGuide(numProt, pageIdx) {
+      const p = STATE.protocols[numProt];
+      if (!p) return;
+      const pg = p.paginas[pageIdx];
+      pg.tipo = 'TIPO_19';
+      pg.code = 'G2026000011113';
+      pg.guia = 'G2026000011113';
+      pg.desc = 'Guia Médica TISS #3 (Convertida na Auditoria)';
+      p.qtd_guias_digitalizadas = p.paginas.filter(x => x.tipo === 'TIPO_19').length;
+      if (p.qtd_guias_digitalizadas === p.qtd_guias_esperada) {
+        p.status_validacao = 'STATUS_INDEXADO_COM_SUCESSO';
+      }
+      renderAll();
+    }
+
+    function deletePage(numProt, pageIdx) {
+      const p = STATE.protocols[numProt];
+      if (!p) return;
+      p.paginas.splice(pageIdx, 1);
+      p.qtd_guias_digitalizadas = p.paginas.filter(x => x.tipo === 'TIPO_19').length;
+      renderAll();
+    }
+
+    function resetDivergence() {
+      STATE.protocols['2049182736'].qtd_guias_digitalizadas = 2;
+      STATE.protocols['2049182736'].status_validacao = 'STATUS_DIVERGENCIA_GUIAS';
+      STATE.protocols['2049182736'].paginas[4] = {
+        num: 5, tipo: 'TIPO_20', code: null, guia: 'G2026000011112',
+        desc: 'Guia #3 sem Barcode Legível (Classificada como Anexo TIPO_20)'
+      };
+      renderAll();
+    }
+
+    function ingestCustomPage() {
+      const code = document.getElementById('new-barcode').value.trim();
+      const curr = STATE.protocols[STATE.selectedProt];
+      const nextNum = curr.paginas.length + 1;
+      let tipo = 'TIPO_20';
+      let desc = `Folha Anexa #${nextNum}`;
+      if (/^(19|20)\d{8}$/.test(code)) {
+        tipo = 'TIPO_18';
+        desc = `Capa de Protocolo ${code}`;
+      } else if (/^G\d{13}$/.test(code)) {
+        tipo = 'TIPO_19';
+        desc = `Guia Médica ${code}`;
+      }
+      curr.paginas.push({ num: nextNum, tipo, code: code || null, guia: code || null, desc });
+      curr.qtd_guias_digitalizadas = curr.paginas.filter(x => x.tipo === 'TIPO_19').length;
+      document.getElementById('new-barcode').value = '';
+      const log = document.getElementById('ingest-log');
+      log.innerHTML = `<div>✔ Pág #${nextNum} capturada: <strong>${tipo}</strong> (${code || 'ANEXO'})</div>` + log.innerHTML;
+      renderAll();
+    }
+
+    function selectProt(num) { STATE.selectedProt = num; STATE.selectedPageIdx = 0; renderAll(); }
+    function selectPage(idx) { STATE.selectedPageIdx = idx; renderAll(); }
+    function prevPage() { if (STATE.selectedPageIdx > 0) { STATE.selectedPageIdx--; renderAll(); } }
+    function nextPage() {
+      const curr = STATE.protocols[STATE.selectedProt];
+      if (curr && STATE.selectedPageIdx < curr.paginas.length - 1) { STATE.selectedPageIdx++; renderAll(); }
+    }
+    function zoomViewer(d) { STATE.zoom = Math.max(0.6, Math.min(1.5, Number((STATE.zoom + d).toFixed(2)))); renderAll(); }
+    function rotatePage(deg) { STATE.rot = (STATE.rot + deg) % 360; renderAll(); }
+
+    renderAll();
+  </script>
+</body>
+</html>
