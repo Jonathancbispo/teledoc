@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>Teledoc.Capture</AssemblyName>
+    <RootNamespace>Teledoc.Capture</RootNamespace>
+    <ApplicationTitle>Teledoc Capture - Estação Ricoh/Fujitsu fi-8170</ApplicationTitle>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Biblioteca TWAIN para comunicação direta com o driver PaperStream IP (fi-8170) -->
+    <PackageReference Include="NTwain" Version="3.7.5" />
+  </ItemGroup>
+
+</Project>
