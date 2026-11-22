@@ -1,0 +1,26 @@
+# Banco de dados e arquivos temporários gerados em runtime
+storage/teledoc.db
+storage/teledoc.db-journal
+storage/video_tmp/
+storage/tiff/*.tif
+storage/pdf/*.pdf
+storage/previews/*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# .NET / Visual Studio / WPF
+desktop/**/bin/
+desktop/**/obj/
+.vs/
+*.user
+*.suo
+
+# Sistema Operacional
+.DS_Store
+Thumbs.db
